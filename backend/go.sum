@@ -1,0 +1,8 @@
+github.com/gin-contrib/cors v1.5.0 h1:i3wvwPMZMkeIqEHEmbFblDi10Svyr9JfYjXG3+t0dKY=
+github.com/gin-contrib/cors v1.5.0/go.mod h1:xsFHVfTn3nPcuKUAyAu/bOQdoCIiwiNHtwRsmAkM5MQ=
+github.com/gin-gonic/gin v1.10.0 h1:4+zhoraLlvLk4tVmKfhJiQM7NRYBMO0suOn5HgVMWkg=
+github.com/gin-gonic/gin v1.10.0/go.mod h1:4+zhoraLlvLk4tVmKfhJiQM7NRYBMO0suOn5HgVMWkg=
+gorm.io/driver/postgres v1.6.0 h1:3cN8iOkmnjoagDlV4G1ItISm+Z0rSkYQ+MmKWw2/Qyo=
+gorm.io/driver/postgres v1.6.0/go.mod h1:F+zf5JKPZiWaCqqlD0NVU58MqdAOy3c3mP5jr+Ahp+d4=
+gorm.io/gorm v1.28.0 h1:gefwXPbTYQiLbOEhiMga+7/bWXJYMYYzryIk0cQ8TkA=
+gorm.io/gorm v1.28.0/go.mod h1:bVRuoGhyO3xbj/jSI6yAgUjqiEqaHwRFvkCMjzTwgWw=

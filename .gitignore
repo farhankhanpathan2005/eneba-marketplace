@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+vendor/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test.js
+*.test.js.map
+*.spec.js
+*.spec.js.map
+*.lock.json
+package-lock.json
+yarn.lock
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+config/config.yaml
+
+# Build output
+dist/
+build/
+bin/
+out/
+
+# Test coverage
+coverage/
+.coverage
+*.out
+
+# Cache
+.caches/
+.vite/
+.eslintcache
