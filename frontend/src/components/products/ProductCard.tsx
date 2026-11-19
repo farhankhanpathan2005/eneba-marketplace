@@ -3,37 +3,56 @@ import type { Product } from '../../types'
 
 interface ProductCardProps {
   product: Product
+  showDiscount?: boolean
 }
 
-const ProductCard = ({ product }: ProductCardProps) => {
+const ProductCard = ({ product, showDiscount = true }: ProductCardProps) => {
   const discount = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0
 
   return (
     <div className="product-card">
-      <Link to={`/products/${product.id}`}>
-        {product.imageUrl && (
-          <img src={product.imageUrl} alt={product.title} />
-        )}
-        <div className="product-info">
-          <h3 className="product-title">{product.title}</h3>
-          {discount > 0 && (
-            <span style={{ background: '#ef4444', color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', marginRight: '0.5rem' }}>
-              -{discount}%
-            </span>
+      <Link to={`/products/${product.id}`} className="product-link" style={{ textDecoration: 'none', color: 'inherit' }}>
+        <div className="product-card-image">
+          {product.imageUrl ? (
+            <img src={product.imageUrl} alt={product.title} loading="lazy" />
+          ) : (
+            <div style={{
+              width: '100%', height: '100%',
+              background: 'linear-gradient(135deg, #1e0f4a 0%, #3d2080 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'rgba(255,255,255,0.2)', fontSize: '2.5rem',
+            }}>
+              🎮
+            </div>
           )}
-          <div>
-            <span className="product-price">${product.price.toFixed(2)}</span>
+          {showDiscount && discount > 0 && (
+            <span className="discount-badge">-{discount}%</span>
+          )}
+          {product.platform && (
+            <span className="platform-tag">{product.platform}</span>
+          )}
+        </div>
+        <div className="product-card-body">
+          <h3 className="product-card-title">{product.title}</h3>
+          <span className="product-card-meta">{product.category}{product.platform ? ` · ${product.platform}` : ''}</span>
+          <div className="product-card-pricing">
+            <span className="product-card-price">${product.price.toFixed(2)}</span>
             {product.originalPrice && (
-              <span className="product-original-price">${product.originalPrice.toFixed(2)}</span>
+              <span className="product-card-original">${product.originalPrice.toFixed(2)}</span>
             )}
           </div>
-          <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '0.5rem' }}>
-            {product.category} • {product.platform || 'Multi-platform'}
-          </p>
         </div>
       </Link>
+      <div className="product-card-footer">
+        <Link
+          to={`/products/${product.id}`}
+          className="btn btn-primary btn-full btn-sm"
+        >
+          View Deal
+        </Link>
+      </div>
     </div>
   )
 }

@@ -12,4 +12,19 @@ export default defineConfig({
       },
     },
   },
+  // Build configuration for production
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+        },
+      },
+    },
+  },
+  // Base path for Vercel deployment
+  base: '/',
 })

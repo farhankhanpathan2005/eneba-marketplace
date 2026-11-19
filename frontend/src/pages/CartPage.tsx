@@ -1,79 +1,236 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { fetchCart, removeFromCart, updateCartItem, createOrder, getUser } from '../services/api'
+import type { CartItem } from '../types'
+import { toast } from '../hooks/useDebounce'
+import SkeletonGrid from '../components/layout/SkeletonGrid'
 
 const CartPage = () => {
-  // TODO: Connect to real cart data
-  const [cartItems] = useState<any[]>([])
-  const total = cartItems.reduce((acc, item) => acc + (item.price || 0) * (item.quantity || 1), 0)
+  const navigate = useNavigate()
+  const [items, setItems] = useState<CartItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [checkoutOpen, setCheckoutOpen] = useState(false)
+  const [selectedPayment, setSelectedPayment] = useState('card')
+  const [processing, setProcessing] = useState(false)
 
-  const handleRemoveItem = (_itemId: number) => {
-    // TODO: Implement remove from cart
+  useEffect(() => {
+    loadCart()
+  }, [])
+
+  async function loadCart() {
+    try {
+      const data = await fetchCart()
+      // The backend already returns product data in the cart items
+      // No need for enrichment - just use the data as-is
+      setItems(data)
+    } catch {
+      setItems([])
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleUpdateQuantity = (_itemId: number, _newQuantity: number) => {
-    // TODO: Implement update quantity
+  const subtotal = items.reduce((acc, item) => {
+    const price = item.product?.price || 0
+    return acc + price * item.quantity
+  }, 0)
+  const tax = subtotal * 0.0
+  const total = subtotal + tax
+
+  const handleRemove = async (itemId: number) => {
+    try {
+      await removeFromCart(itemId)
+      setItems(prev => prev.filter(i => i.id !== itemId))
+      toast('Removed from cart', 'info')
+      updateCartCount()
+    } catch {
+      toast('Failed to remove item', 'error')
+    }
   }
 
-  const handleCheckout = () => {
-    // TODO: Implement checkout
+  const handleQuantity = async (itemId: number, newQty: number) => {
+    if (newQty < 1) return
+    try {
+      await updateCartItem(itemId, newQty)
+      setItems(prev => prev.map(i => i.id === itemId ? { ...i, quantity: newQty } : i))
+    } catch {
+      toast('Failed to update quantity', 'error')
+    }
   }
 
-  if (cartItems.length === 0) {
+  function updateCartCount() {
+    const count = items.reduce((acc, i) => acc + i.quantity, 0)
+    localStorage.setItem('eneba_cart_count', String(count))
+    window.dispatchEvent(new Event('cart-changed'))
+  }
+
+  const handleCheckout = async () => {
+    const user = getUser()
+    if (!user) {
+      toast('Please login to checkout', 'info')
+      navigate('/login')
+      return
+    }
+    setCheckoutOpen(true)
+  }
+
+  const confirmOrder = async () => {
+    setProcessing(true)
+    try {
+      const order = await createOrder(selectedPayment)
+      setCheckoutOpen(false)
+      setItems([])
+      localStorage.setItem('eneba_cart_count', '0')
+      navigate('/order-confirmation', { state: { order } })
+    } catch {
+      toast('Checkout failed. Please try again.', 'error')
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  if (loading) {
     return (
-      <div className="container text-center" style={{ padding: '3rem 0' }}>
+      <div>
+        <h1 className="section-title" style={{ marginTop: '1.5rem' }}>Shopping Cart</h1>
+        <SkeletonGrid count={3} />
+      </div>
+    )
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="empty-state">
+        <div className="empty-state-icon">🛒</div>
         <h2>Your cart is empty</h2>
-        <p style={{ color: '#666', margin: '1rem 0' }}>Add some products to get started!</p>
-        <a href="/products" className="btn btn-primary">Browse Products</a>
+        <p>Add some products to get started!</p>
+        <Link to="/products" className="btn btn-primary">Browse Products</Link>
       </div>
     )
   }
 
   return (
-    <div className="container">
-      <h1 className="section-title">Shopping Cart</h1>
+    <div>
+      <h1 className="section-title" style={{ marginTop: '1.5rem' }}>Shopping Cart ({items.length} items)</h1>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
+      <div className="cart-layout">
+        {/* Items */}
         <div>
-          {cartItems.map((item) => (
-            <div key={item.id} style={{ display: 'flex', gap: '1rem', padding: '1rem', background: 'white', borderRadius: '8px', marginBottom: '1rem' }}>
-              {item.image_url && <img src={item.image_url} alt={item.title} style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }} />}
-              <div style={{ flex: 1 }}>
-                <h3>{item.title}</h3>
-                <p style={{ color: '#666' }}>{item.category}</p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
-                  <button onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)} className="btn btn-secondary" style={{ padding: '0.25rem 0.5rem' }}>-</button>
+          {items.map(item => (
+            <div key={item.id} className="cart-item">
+              <img
+                src={item.product?.imageUrl || 'https://via.placeholder.com/90'}
+                alt={item.product?.title || 'Product'}
+                className="cart-item-image"
+              />
+              <div className="cart-item-info">
+                <h3>{item.product?.title || `Product #${item.productId}`}</h3>
+                <p className="cart-item-seller">{item.product?.category} • {item.product?.platform || 'Multi-platform'}</p>
+                <div className="quantity-control">
+                  <button onClick={() => handleQuantity(item.id, item.quantity - 1)}>−</button>
                   <span>{item.quantity}</span>
-                  <button onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)} className="btn btn-secondary" style={{ padding: '0.25rem 0.5rem' }}>+</button>
+                  <button onClick={() => handleQuantity(item.id, item.quantity + 1)}>+</button>
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <p style={{ fontWeight: '600' }}>${(item.price * item.quantity).toFixed(2)}</p>
-                <button onClick={() => handleRemoveItem(item.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}>Remove</button>
+              <div className="cart-item-price">
+                <span className="price">${((item.product?.price || 0) * item.quantity).toFixed(2)}</span>
+                <button className="remove-btn" onClick={() => handleRemove(item.id)}>✕ Remove</button>
               </div>
             </div>
           ))}
         </div>
 
-        <div style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', height: 'fit-content' }}>
+        {/* Summary */}
+        <div className="cart-summary">
           <h2>Order Summary</h2>
-          <div style={{ marginTop: '1rem', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span>Subtotal</span>
-              <span>${total.toFixed(2)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span>Tax</span>
-              <span>${(total * 0.1).toFixed(2)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', fontSize: '1.25rem', marginTop: '1rem', borderTop: '2px solid #eee', paddingTop: '1rem' }}>
-              <span>Total</span>
-              <span>${(total * 1.1).toFixed(2)}</span>
-            </div>
+          <div className="summary-row">
+            <span>Subtotal</span>
+            <span>${subtotal.toFixed(2)}</span>
           </div>
-          <button className="btn btn-primary" style={{ width: '100%', marginTop: '1.5rem', padding: '1rem' }} onClick={handleCheckout}>
-            Proceed to Checkout
+          <div className="summary-row">
+            <span>Tax</span>
+            <span>$0.00</span>
+          </div>
+          <div className="summary-save">
+            🎉 You're saving ${(items.reduce((acc, i) => {
+              const orig = i.product?.originalPrice || i.product?.price || 0
+              return acc + (orig - (i.product?.price || 0)) * i.quantity
+            }, 0)).toFixed(2)} on this order!
+          </div>
+          <div className="summary-row total">
+            <span>Total</span>
+            <span className="value">${total.toFixed(2)}</span>
+          </div>
+          <button
+            className="btn btn-primary btn-full btn-lg"
+            style={{ marginTop: '1.5rem' }}
+            onClick={handleCheckout}
+          >
+            Proceed to Checkout →
           </button>
+          <p style={{ fontSize: '0.8rem', color: '#6b7280', textAlign: 'center', marginTop: '1rem' }}>
+            🔒 Secure checkout • Instant delivery
+          </p>
         </div>
       </div>
+
+      {/* Checkout Modal */}
+      {checkoutOpen && (
+        <div className="modal-overlay" onClick={() => setCheckoutOpen(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Checkout</h2>
+              <button className="modal-close" onClick={() => setCheckoutOpen(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <h3 style={{ fontWeight: 700, marginBottom: '1rem' }}>Select Payment Method</h3>
+              <div className="payment-options">
+                {[
+                  { id: 'card', label: 'Credit / Debit Card', desc: 'Visa, Mastercard, Amex' },
+                  { id: 'paypal', label: 'PayPal', desc: 'Pay securely with PayPal' },
+                  { id: 'crypto', label: 'Cryptocurrency', desc: 'Bitcoin, Ethereum' },
+                ].map(method => (
+                  <label key={method.id} className={`payment-option ${selectedPayment === method.id ? 'selected' : ''}`}>
+                    <input
+                      type="radio"
+                      name="payment"
+                      value={method.id}
+                      checked={selectedPayment === method.id}
+                      onChange={() => setSelectedPayment(method.id)}
+                    />
+                    <div>
+                      <div className="pay-label">{method.label}</div>
+                      <div className="pay-desc">{method.desc}</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+
+              <div style={{ background: '#f8f9fa', borderRadius: '10px', padding: '1rem', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <span style={{ color: '#6b7280' }}>Items ({items.reduce((a, i) => a + i.quantity, 0)})</span>
+                  <span>${subtotal.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '1.1rem' }}>
+                  <span>Total</span>
+                  <span style={{ color: '#16a34a' }}>${total.toFixed(2)}</span>
+                </div>
+              </div>
+
+              <button
+                className="btn btn-primary btn-full btn-lg"
+                onClick={confirmOrder}
+                disabled={processing}
+              >
+                {processing ? 'Processing...' : `Pay $${total.toFixed(2)}`}
+              </button>
+              <p style={{ fontSize: '0.8rem', color: '#6b7280', textAlign: 'center', marginTop: '1rem' }}>
+                By completing this order you agree to our Terms of Service
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

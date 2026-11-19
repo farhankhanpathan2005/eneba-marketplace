@@ -12,7 +12,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backend/migrations/001_init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -21,8 +20,8 @@ services:
 
   backend:
     build:
-      context: ./backend
-      dockerfile: ../Dockerfile.backend
+      context: .
+      dockerfile: ./Dockerfile.backend
     container_name: eneba-backend
     ports:
       - "8080:8080"
@@ -38,24 +37,16 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    volumes:
-      - ./backend:/app
-    working_dir: /app
-    command: go run ./cmd/server
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: ../Dockerfile.frontend
+      context: .
+      dockerfile: ./Dockerfile.frontend
     container_name: eneba-frontend
     ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend/src:/app/src
-      - /app/node_modules
+      - "3000:80"
     depends_on:
       - backend
-    command: npm run dev -- --host
 
 volumes:
   postgres_data:

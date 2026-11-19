@@ -9,6 +9,8 @@ export interface Product {
   originalPrice?: number
   stock: number
   sellerId: number
+  rating?: number
+  reviewCount?: number
   createdAt: string
   updatedAt: string
 }
@@ -36,12 +38,22 @@ export interface Order {
   total: number
   createdAt: string
   orderItems?: OrderItem[]
+  keys?: string[]
 }
 
 export interface OrderItem {
   id: number
   orderId: number
   productId: number
+  productName?: string
+  productImage?: string
   quantity: number
   price: number
+}
+
+export interface AuthTokens {
+  token: string
+  userId: number
+  username: string
+  role: string
 }

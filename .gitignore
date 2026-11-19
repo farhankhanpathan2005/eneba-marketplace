@@ -50,3 +50,11 @@ coverage/
 .caches/
 .vite/
 .eslintcache
+
+# Backend build artifacts
+backend/server
+backend/go.sum.backup
+backend/go.sum.old
+
+# Deployment files
+frontend/server.log
